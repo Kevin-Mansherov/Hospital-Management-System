@@ -1,12 +1,16 @@
 package com.example.hospitalmanagementsystem.controller;
 
 
-import com.example.hospitalmanagementsystem.Response;
-import com.example.hospitalmanagementsystem.model.Doctor;
-import com.example.hospitalmanagementsystem.service.DoctorService;
+import com.example.hospitalmanagementsystem.DTOs.DoctorDto;
+import com.example.hospitalmanagementsystem.response.StandardResponse;
+import com.example.hospitalmanagementsystem.services.Doctor.DoctorService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -18,64 +22,47 @@ public class DoctorController {
         this.doctorService = doctorService;
     }
 
-    public boolean checkDoctorData(Doctor doctor) {
-        return doctor.getDoctorId() != null &&
-                doctor.getFirstName() != null &&
-                doctor.getLastName() != null &&
-                doctor.getSpecialty() != null &&
-                doctor.getContactNumber() != null;
+    // Get all doctors
+    @GetMapping("/allDoctors")
+    public ResponseEntity<StandardResponse> getAllDoctors() {
+        List<DoctorDto> doctors = doctorService.getAllDoctors();
+        StandardResponse response = new StandardResponse("success", doctors, null);
+        return ResponseEntity.ok(response);
     }
 
-    //Get All Doctors
-    @GetMapping("/getAllDoctors")
-    public List<Doctor> getAllDoctors() {
-        return doctorService.getAllDoctors();
+    // Get doctor by ID
+    @GetMapping("/getById/{id}")
+    public ResponseEntity<StandardResponse> getDoctorById(@PathVariable String id) {
+        DoctorDto doctor = doctorService.getDoctorById(id);
+        StandardResponse response = new StandardResponse("success", doctor, null);
+        return ResponseEntity.ok(response);
     }
 
-    //Get Doctor by ID
-    @GetMapping("/getDoctorById")
-    public ResponseEntity<Doctor> getDoctorById(@RequestParam String doctorId) {
-        return doctorService.getDoctorById(doctorId)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(404).body(null));
-    }
-
-    //Add Doctor
+    // Add a new doctor
     @PostMapping("/addDoctor")
-    public ResponseEntity<String> addDoctor(@RequestBody Doctor doctor) {
-        if(!checkDoctorData(doctor)) {
-            return ResponseEntity.badRequest().body("Invalid doctor data, try again.");
-        }
-        Response response = doctorService.addDoctor(doctor);
-        if (response.isSuccess()) {
-            return ResponseEntity.ok(response.getMessage());
-        } else {
-            return ResponseEntity.status(400).body(response.getMessage());
-        }
+    public ResponseEntity<StandardResponse> addDoctor(@Valid @RequestBody DoctorDto doctorDto) {
+        DoctorDto addedDoctor = doctorService.addDoctor(doctorDto);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(addedDoctor.getDoctorId())
+                .toUri();
+        StandardResponse response = new StandardResponse("success", addedDoctor, null);
+        return ResponseEntity.created(location).body(response);
     }
 
-    //Update Doctor
-    @PutMapping("/updateDoctor")
-    public ResponseEntity<String> updateDoctor(@RequestBody Doctor updatedDoctor) {
-        if(!checkDoctorData(updatedDoctor)) {
-            return ResponseEntity.badRequest().body("Invalid doctor data, try again.");
-        }
-        Response response = doctorService.updateDoctor(updatedDoctor);
-        if (response.isSuccess()) {
-            return ResponseEntity.ok(response.getMessage());
-        } else {
-            return ResponseEntity.status(400).body(response.getMessage());
-        }
+    // Update doctor
+    @PutMapping("/update/{id}")
+    public ResponseEntity<StandardResponse> updateDoctor(@PathVariable String id, @Valid @RequestBody DoctorDto doctorDto) {
+        DoctorDto updatedDoctor = doctorService.updateDoctor(id, doctorDto);
+        StandardResponse response = new StandardResponse("success", updatedDoctor, null);
+        return ResponseEntity.ok(response);
     }
 
-    //Delete Doctor
-    @DeleteMapping("/deleteDoctor")
-    public ResponseEntity<String> deleteDoctor(@RequestParam String doctorId) {
-        Response response = doctorService.deleteDoctor(doctorId);
-        if (response.isSuccess()) {
-            return ResponseEntity.ok(response.getMessage());
-        } else {
-            return ResponseEntity.status(400).body(response.getMessage());
-        }
+    // Delete doctor
+    @DeleteMapping("/delete/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteDoctor(@PathVariable String id) {
+        doctorService.deleteDoctor(id);
     }
 }

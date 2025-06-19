@@ -1,12 +1,16 @@
 package com.example.hospitalmanagementsystem.controller;
 
-import com.example.hospitalmanagementsystem.Response;
+import com.example.hospitalmanagementsystem.DTOs.PatientDto;
 import com.example.hospitalmanagementsystem.model.Patient;
-import com.example.hospitalmanagementsystem.service.PatientService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.hospitalmanagementsystem.response.StandardResponse;
+import com.example.hospitalmanagementsystem.services.Patient.PatientService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,77 +19,53 @@ import java.util.Optional;
 public class PatientController {
     private final PatientService patientService;
 
-    @Autowired
     public PatientController(PatientService patientService) {
         this.patientService = patientService;
     }
 
-    //check patient data
-    public boolean checkPatientData(Patient patient){
-        return patient.getPatientId() != null && patient.getFirstName() != null && patient.getLastName() != null &&
-                patient.getDateOfBirth() != null && patient.getGender() != null && patient.getAddress() != null &&
-                patient.getContactNumber() != null; // Invalid data
+    //get all patients
+    @GetMapping("allPatients")
+    public ResponseEntity<StandardResponse> getAllPatients() {
+        List<PatientDto> patients = patientService.getAllPatients();
+        StandardResponse response = new StandardResponse("success", patients, null);
+        return ResponseEntity.ok(response);
     }
 
-    //Add Patient
-    @PostMapping("/addPatient")
-    public ResponseEntity<String> addPatient(@RequestBody Patient patient) {
-        System.out.println("\n[INFO] - Create user attempt with patient: " + patient.toString() + "\n");
-        if(!checkPatientData(patient)){
-            return ResponseEntity.badRequest().body("Invalid patient data, try again.");
-        }
-        Response response = patientService.addPatient(patient);
-        if (response.isSuccess()) {
-            return ResponseEntity.ok(response.getMessage());
-        } else {
-            return ResponseEntity.status(400).body(response.getMessage());
-        }
-    }
-    //Get All Patients
-    @GetMapping("/getAllPatients")
-    public List<Patient> getAllPatients() {
-        return patientService.getAllPatients();
+    //get patient by id
+    @GetMapping("/getById/{patientId}")
+    public ResponseEntity<StandardResponse> getPatientById(@PathVariable String patientId) {
+        PatientDto patient = patientService.getPatientById(patientId);
+        StandardResponse response = new StandardResponse("success", patient, null);
+        return ResponseEntity.ok(response);
     }
 
-    //Get Patient by ID
-    @GetMapping("/getPatientById")
-    public ResponseEntity<Patient> getPatientById(@RequestParam String patientId) {
-        Optional<Patient> patient = patientService.getPatientById(patientId);
+    //add a new patient
+    @PostMapping("addPatient")
+    public ResponseEntity<StandardResponse> addPatient(@Valid @RequestBody PatientDto patientDto) {
+        PatientDto addedPatient = patientService.addPatient(patientDto);
 
-        if(patient.isPresent()){
-            return ResponseEntity.ok(patient.get());
-        } else {
-            return ResponseEntity.status(404).body(null);
-        }
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{patientId}")
+                .buildAndExpand(addedPatient.getPatientId())
+                .toUri();
+
+        StandardResponse response = new StandardResponse("success", addedPatient, null);
+        return ResponseEntity.created(location).body(response);
     }
 
-    //Update Patient
-    @PutMapping("/updatePatient")
-    public ResponseEntity<String> updatePatient(@RequestBody Patient updatedPatient) {
-        System.out.println("\n[INFO] - Update patient attempt with patient: " + updatedPatient.toString() + "\n");
-        if(!checkPatientData(updatedPatient)){
-            return ResponseEntity.badRequest().body("Invalid patient data, try again.");
-        }
-        Response response = patientService.updatePatient(updatedPatient);
-        if (response.isSuccess()) {
-            return ResponseEntity.ok(response.getMessage());
-        } else {
-            return ResponseEntity.status(400).body(response.getMessage());
-        }
+    //update patient
+    @PutMapping("/update/{patientId}")
+    public ResponseEntity<StandardResponse> updatePatient(@PathVariable String patientId, @Valid @RequestBody PatientDto patientDto) {
+        PatientDto updatedPatient = patientService.updatePatient(patientId, patientDto);
+        StandardResponse response = new StandardResponse("success", updatedPatient, null);
+        return ResponseEntity.ok(response);
     }
 
-    //Delete Patient
-    @DeleteMapping("/deletePatient")
-    public ResponseEntity<String> deletePatient(@RequestParam String patientId) {
-        System.out.println("\n[INFO] - Delete patient attempt with ID: " + patientId + "\n");
-        if (patientId == null || patientId.isEmpty()) {
-            return ResponseEntity.badRequest().body("Invalid patient ID, try again.");
-        }
-        Response response = patientService.deletePatient(patientId);
-        if (response.isSuccess()) {
-            return ResponseEntity.ok(response.getMessage());
-        } else {
-            return ResponseEntity.status(404).body(response.getMessage());
-        }
+    //delete patient
+    @DeleteMapping("/delete/{patientId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePatient(@PathVariable String patientId) {
+        patientService.deletePatient(patientId);
     }
 }

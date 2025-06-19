@@ -6,13 +6,15 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
-import java.util.Date;
+import java.sql.Date;
 
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
 @Table(name="patients")
 public class Patient {
     @Id
@@ -23,17 +25,4 @@ public class Patient {
     private String gender;
     private String address;
     private String contactNumber;
-
-    @Override
-    public String toString() {
-        return "Patient{" +
-                "patientId='" + patientId + '\'' +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", dateOfBirth=" + dateOfBirth +
-                ", gender='" + gender + '\'' +
-                ", address='" + address + '\'' +
-                ", contactNumber='" + contactNumber + '\'' +
-                '}';
-    }
 }
